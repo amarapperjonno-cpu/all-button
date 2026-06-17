@@ -319,28 +319,46 @@
     document.getElementById("themeToggle").addEventListener("click", toggleTheme);
     document.getElementById("drawerThemeToggle").addEventListener("click", toggleTheme);
 
-    const overlayButtons = [
+const overlayButtons = [
         { btnId: 'aboutBtn', overlayId: 'aboutOverlay' },
         { btnId: 'howToUseBtn', overlayId: 'howToUseOverlay' },
         { btnId: 'howToBeBenefitBtn', overlayId: 'howToBeBenefitOverlay' }
     ];
+
+    // ওভারলে ওপেন করার সময় হিস্ট্রি পুশ করা
     overlayButtons.forEach(item => {
         document.getElementById(item.btnId).addEventListener('click', e => {
-            e.preventDefault(); closeDrawer(); document.getElementById(item.overlayId).classList.add('open');
+            e.preventDefault(); 
+            closeDrawer(); 
+            document.getElementById(item.overlayId).classList.add('open');
+            history.pushState({ overlayOpen: true, id: item.overlayId }, "");
         });
     });
     
+    // সবুজ বারের ব্যাক অ্যারো বাটন চাপলে হিস্ট্রি ব্যাক করা
     document.querySelectorAll('.back-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.getElementById(btn.dataset.target).classList.remove('open');
+            if (history.state && history.state.overlayOpen) {
+                history.back();
+            } else {
+                document.getElementById(btn.dataset.target).classList.remove('open');
+            }
         });
+    });
+
+    // মোবাইলের ব্যাক বাটন (বা ব্রাউজারের ব্যাক) চাপলে ওভারলে রিমুভ করা
+    window.addEventListener('popstate', (e) => {
+        closeDrawer();
+        document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
     });
 
     document.addEventListener("keydown", e => { 
         if (e.key === "Escape") {
-            const openOverlay = document.querySelector('.overlay.open');
-            if (openOverlay) { openOverlay.classList.remove('open'); }
-            else if (drawer.classList.contains('open')) { closeDrawer(); }
+            if (history.state && history.state.overlayOpen) {
+                history.back();
+            } else if (drawer.classList.contains('open')) { 
+                closeDrawer(); 
+            }
         }
     });
 
@@ -351,30 +369,51 @@ async function fetchDocData() {
         const response = await fetch(scriptUrl);
         const data = await response.json();
 
+        // WhatsApp Link
         if (data.contact_whatsapp) {
             let phone = data.contact_whatsapp.replace(/\D/g, ''); 
             if (phone.startsWith('0')) phone = '88' + phone; 
+            let waUrl = "https://api.whatsapp.com/send/?phone=" + phone + "&text&type=phone_number&app_absent=0";
 
             let waBtn = document.getElementById('wa_link');
-            waBtn.href = "https://wa.me/" + phone; 
+            waBtn.href = waUrl; 
             waBtn.target = "_blank"; 
 
             waBtn.addEventListener('click', function(e) {
                 if (window.AppInventor && window.AppInventor.setWebViewString) {
                     e.preventDefault(); 
-                    window.AppInventor.setWebViewString("whatsapp:" + phone); 
+                    // Kodular এ কমান্ড পাঠানো হচ্ছে
+                    window.AppInventor.setWebViewString("open_app:" + waUrl); 
                 }
             });
         }
 
+        // Facebook Link
         if (data.facebook_link) {
             let fbUrl = data.facebook_link.replace("<br>", "").trim();
-            document.getElementById('fb_link').href = fbUrl;
+            let fbBtn = document.getElementById('fb_link');
+            fbBtn.href = fbUrl;
+            
+            fbBtn.addEventListener('click', function(e) {
+                if (window.AppInventor && window.AppInventor.setWebViewString) {
+                    e.preventDefault();
+                    window.AppInventor.setWebViewString("open_app:" + fbUrl);
+                }
+            });
         }
 
+        // YouTube Link
         if (data.youtube_link) {
             let ytUrl = data.youtube_link.replace("<br>", "").trim();
-            document.getElementById('yt_link').href = ytUrl;
+            let ytBtn = document.getElementById('yt_link');
+            ytBtn.href = ytUrl;
+            
+            ytBtn.addEventListener('click', function(e) {
+                if (window.AppInventor && window.AppInventor.setWebViewString) {
+                    e.preventDefault();
+                    window.AppInventor.setWebViewString("open_app:" + ytUrl);
+                }
+            });
         }
 
         if (data.about_us) document.getElementById('about_content').innerHTML = data.about_us;
